@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "macos-e2e-kit",
+  "description": "Agent-driven E2E testing for any macOS app: embeddable debug IPC bridge, zero-dependency Node driver/runner, and onboarding + run skills.",
+  "owner": {
+    "name": "SangUk Park"
+  },
+  "plugins": [
+    {
+      "name": "macos-e2e-kit",
+      "description": "E2E-test any macOS app with an agent: in-process debug IPC bridge, observe-act-verify driver, and JS test runner.",
+      "source": "./",
+      "category": "testing"
+    }
+  ]
+}

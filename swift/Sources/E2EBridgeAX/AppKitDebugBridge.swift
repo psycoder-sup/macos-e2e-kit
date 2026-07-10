@@ -1,0 +1,35 @@
+import AppKit
+import E2EBridgeCore
+
+/// The `DebugBridge` implementation for AppKit/SwiftUI apps — the concrete driver `E2EBridgeServer` uses by
+/// default. Delegates observation (screenshot, uiTree) to `WindowCapture`/`AXTreeCapture` and control
+/// (perform, setValue, type, key) to `AXPerform`. Host apps inject one instance when wiring up the debug
+/// bridge (see docs/integration.md).
+@MainActor
+public final class AppKitDebugBridge: DebugBridge {
+    public init() {}
+
+    public func screenshot() -> [ScreenshotShot] {
+        WindowCapture.captureVisibleWindows()
+    }
+
+    public func uiTree() async -> [AXNode] {
+        await AXTreeCapture.captureTrees()
+    }
+
+    public func perform(identifier: String) async throws -> AXActionResult {
+        try AXPerform.perform(identifier: identifier)
+    }
+
+    public func setValue(identifier: String, value: String) async throws -> AXActionResult {
+        try AXPerform.setValue(identifier: identifier, value: value)
+    }
+
+    public func type(identifier: String?, text: String) async throws -> AXActionResult {
+        try AXPerform.type(identifier: identifier, text: text)
+    }
+
+    public func key(name: String, modifiers: [String]) async throws -> AXActionResult {
+        try AXPerform.key(name: name, modifiers: modifiers)
+    }
+}
