@@ -6,7 +6,6 @@ description: >-
   confirm a UI change actually works, and run its tests/e2e suite with per-file pass/fail
   classification. Use when asked to "e2e the mac app", "run the macos e2e tests", "drive the app
   and verify", "screenshot the app and check it", "맥앱 E2E", "맥 앱 실제로 띄워서 검증".
-version: 0.1.0
 ---
 
 # e2e-run — drive & verify an onboarded macOS app
@@ -53,7 +52,7 @@ READY inst=<inst> SOCK=<absolute socket path>
 Alias the driver to THIS session's socket (from `READY`):
 
 ```bash
-d(){ SOCK=<sock from READY> node ${CLAUDE_PLUGIN_ROOT}/node/drive.mjs "$@"; }
+d(){ SOCK="<sock from READY>" node ${CLAUDE_PLUGIN_ROOT}/node/drive.mjs "$@"; }  # path contains a space — always quote it
 ```
 
 - **Observe** — `d tree` (compact AX tree: identifier·role·value·`[focused]`/`[disabled]`·frame — where
@@ -77,7 +76,7 @@ d call demo.state                  # after: ["First item"] → verified
 
 ## 3. Run the suite
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/node/runner.mjs --dir tests/e2e --sock <sock>
+node ${CLAUDE_PLUGIN_ROOT}/node/runner.mjs --dir tests/e2e --sock "<sock>"
 ```
 
 Discovers `tests/e2e/*.e2e.mjs`, runs them **sequentially** against the one app instance, and prints

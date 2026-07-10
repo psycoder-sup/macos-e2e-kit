@@ -1,7 +1,6 @@
 ---
 name: e2e-setup
 description: This skill should be used when the user asks to "set up e2e for my mac app", "add the e2e bridge", "onboard this app for e2e", "wire up e2e testing", "add accessibility identifiers for e2e testing", "맥앱 E2E 셋업", "E2E 브리지 추가" — it onboards a macOS app repo (one-time, not per session) for agent-driven E2E testing by embedding the debug IPC bridge, adopting accessibility-identifier conventions, and scaffolding the harness and a starter test.
-version: 0.1.0
 ---
 
 # E2E Setup
@@ -91,8 +90,9 @@ exists rather than overwriting it. Then fill in the FILL-IN functions `e2e/harne
 | `app_ready_extra` | no (no-op default) | extra readiness checks beyond `debug.ping` answering |
 
 Also set, at the top of the file: `APP_NAME` (a state-dir slug), `BUNDLE_ID` (must match what the
-app reports at runtime — see step 1's bare-executable note), and `KIT_NODE_DIR` (this kit's
-`node/` directory — `${CLAUDE_PLUGIN_ROOT}/node` for a plugin install). `examples/DemoApp/harness.sh`
+app reports at runtime — see step 1's bare-executable note), and `KIT_ROOT` (the kit root — your
+plugin install root `${CLAUDE_PLUGIN_ROOT}` or a local checkout — from which the harness resolves
+`node/drive.mjs` and `templates/harness-lib.sh`). `examples/DemoApp/harness.sh`
 in this plugin is a complete, working reference implementation to copy patterns from.
 
 ## 4. Optional: register app-specific side-channel ops

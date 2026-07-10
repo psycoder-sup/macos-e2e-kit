@@ -57,7 +57,7 @@ copy_if_absent "$plugin_root/templates/example.e2e.mjs" "$target_abs/tests/e2e/s
 cat <<EOF
 
 Next steps:
-  1. Edit $target_abs/e2e/harness.sh — set APP_NAME, BUNDLE_ID, KIT_NODE_DIR, and fill in
+  1. Edit $target_abs/e2e/harness.sh — set APP_NAME, BUNDLE_ID, KIT_ROOT, and fill in
      build_app, backend_up/backend_down (optional), launch_app, and app_ready_extra (optional).
   2. Edit $target_abs/tests/e2e/smoke.e2e.mjs with a real assertion once the app is wired up.
   3. Verify: $target_abs/e2e/harness.sh up

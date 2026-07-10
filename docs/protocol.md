@@ -86,7 +86,7 @@ registry (or a fallback handler), then `unknown_op` if nothing claims it.
 
 | op | args | result | notes |
 |---|---|---|---|
-| `debug.ping` | *(none)* | `{ pid: number, version: string }` | Liveness check. Unlike every other `debug.*` op, this one answers even when no driver has been installed yet (`E2EBridgeServer(driver: nil, ...)`) — use it to detect "process is up" independent of "AX driver is wired in". |
+| `debug.ping` | *(none)* | `{ ok: true, pid: number, version: string }` | Liveness check. Unlike every other `debug.*` op, this one answers even when no driver has been installed yet (`E2EBridgeServer(driver: nil, ...)`) — use it to detect "process is up" independent of "AX driver is wired in". |
 | `debug.screenshot` | *(none)* | `{ windows: ScreenshotShot[] }` | In-process render of every visible app window. No screen-recording (TCC) permission required. |
 | `debug.ui_tree` | *(none)* | `{ windows: AXNode[] }` | Accessibility tree, one root per window. May require Accessibility (TCC) permission at runtime. |
 | `debug.ui_perform` | `{ identifier: string }` | `AXActionResult` | AXPress the element with that accessibility identifier. |

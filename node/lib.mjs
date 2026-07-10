@@ -44,7 +44,8 @@ function sleep(ms) {
 // (or rejects on transport-level failure — timeout, connection error, premature close, bad JSON).
 function wireCall(sock, op, args, timeoutMs) {
   return new Promise((resolve, reject) => {
-    let received = Buffer.alloc(0);
+    let chunks = [];
+    let totalLength = 0;
     let expected = null;
     let settled = false;
     const socket = net.createConnection(sock);
@@ -63,9 +64,18 @@ function wireCall(sock, op, args, timeoutMs) {
       socket.write(payload);
     });
     socket.on("data", (chunk) => {
-      received = Buffer.concat([received, chunk]);
-      if (expected === null && received.byteLength >= 4) expected = received.readUInt32BE(0);
-      if (expected !== null && received.byteLength >= 4 + expected) {
+      chunks.push(chunk);
+      totalLength += chunk.byteLength;
+      // Accumulate without concatenating on every event (that's O(n^2) for large payloads
+      // split across many chunks). Read the 4-byte BE length header once we have enough
+      // bytes — almost always available in the first chunk, but concat just the buffered
+      // chunks so far in the rare case the header itself is split across chunks.
+      if (expected === null && totalLength >= 4) {
+        const headerBuf = chunks[0].byteLength >= 4 ? chunks[0] : Buffer.concat(chunks);
+        expected = headerBuf.readUInt32BE(0);
+      }
+      if (expected !== null && totalLength >= 4 + expected) {
+        const received = Buffer.concat(chunks);
         const body = received.subarray(4, 4 + expected).toString("utf8");
         try {
           finish(() => resolve(JSON.parse(body)));

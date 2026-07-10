@@ -231,9 +231,9 @@ The template already computes the per-checkout instance token (`inst`, from a ha
 `git rev-parse --show-toplevel`, overridable via `E2E_INSTANCE`), the matching socket path
 (`~/Library/Application Support/<BUNDLE_ID>.<inst>/e2e.sock` — must match your app's
 `E2ESocketPath` derivation), the 104-byte `sun_path` guard, and a `drive()` helper that shells out
-to `node "$KIT_NODE_DIR/drive.mjs"` against that socket. Point `KIT_NODE_DIR` at wherever this
-kit's `node/` directory lives for your checkout (`${CLAUDE_PLUGIN_ROOT}/node` when installed as a
-plugin).
+to `node "$KIT_ROOT/node/drive.mjs"` against that socket. Point `KIT_ROOT` at the kit root —
+your plugin install root `${CLAUDE_PLUGIN_ROOT}` or a local checkout — from which the harness
+resolves `node/drive.mjs` and `templates/harness-lib.sh`.
 
 `node/drive.mjs` is the CLI a harness (or you, by hand) uses to poke the running app:
 

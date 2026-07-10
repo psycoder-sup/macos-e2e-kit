@@ -74,10 +74,19 @@ public extension JSONValue {
         return nil
     }
 
+    /// Reads this value as an `Int`, if possible.
+    ///
+    /// `.int` returns the stored value directly. `.double` truncates toward zero (`3.9` → `3`,
+    /// `-3.9` → `-3`) like the old behavior, but is total: non-finite doubles (`.infinity`, `.nan`)
+    /// and doubles outside `Int`'s representable range (e.g. a wire literal like
+    /// `10000000000000000000`, which decodes as `.double` since it overflows `Int` first) return
+    /// `nil` instead of trapping. All other cases return `nil`.
     var intValue: Int? {
         switch self {
         case .int(let value): return value
-        case .double(let value): return Int(value)
+        case .double(let value):
+            guard value.isFinite else { return nil }
+            return Int(exactly: value.rounded(.towardZero))
         default: return nil
         }
     }

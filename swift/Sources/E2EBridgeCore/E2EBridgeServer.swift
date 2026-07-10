@@ -1,6 +1,7 @@
 import Foundation
 
 /// The package version reported by `debug.ping`.
+/// Bump together with `.claude-plugin/plugin.json` "version" on every release.
 public enum E2EBridgeVersion {
     public static let current = "0.1.0"
 }

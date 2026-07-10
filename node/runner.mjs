@@ -92,6 +92,67 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
 }
 
+// Per-test guard around the single shared client. Tests run sequentially against ONE app instance,
+// so a test that has already settled (passed, failed, or timed out) must not keep driving the UI
+// while the NEXT test runs. After a test settles we revoke() its wrapper: any further call the
+// abandoned test makes — directly, or from a waitFor / waitForNode poll loop still spinning inside
+// lib.mjs — rejects immediately instead of firing a real click / type / key into the app.
+//
+// A single IPC call already in flight on the socket can't be cancelled mid-call (accepted — each
+// has its own 20s cap in lib.mjs); revocation only blocks NEW ops and breaks polling loops, which
+// is what actually protects the next test.
+function revocableClient(d, name) {
+  let revoked = false;
+  const throwIfRevoked = (method) => {
+    if (revoked) {
+      throw new Error(`test "${name}" already finished — leaked async call to d.${method}()`);
+    }
+  };
+  // Guard the predicate, not just the entry point: lib.mjs's waitFor re-invokes fn each tick, so
+  // re-checking on every iteration is what lets revocation interrupt an already-running wait.
+  const waitFor = (fn, opts) =>
+    d.waitFor(async (...a) => {
+      throwIfRevoked("waitFor");
+      return fn(...a);
+    }, opts);
+  // Mirror lib.mjs's waitForNode on top of the guarded waitFor + a guarded tree() poll.
+  const waitForNode = (id, { enabled, timeoutMs } = {}) =>
+    waitFor(
+      async () => {
+        throwIfRevoked("waitForNode");
+        const node = d.find(await d.tree(), id);
+        if (!node) return undefined;
+        if (enabled === true && node.enabled === false) return undefined;
+        return node;
+      },
+      { timeoutMs, desc: `node "${id}"${enabled === true ? " enabled" : ""}` }
+    );
+  const guarded = (method) => (...args) => {
+    throwIfRevoked(method);
+    return d[method](...args);
+  };
+  const proxy = {
+    call: guarded("call"),
+    ping: guarded("ping"),
+    tree: guarded("tree"),
+    flat: guarded("flat"),
+    find: guarded("find"),
+    shot: guarded("shot"),
+    perform: guarded("perform"),
+    setval: guarded("setval"),
+    type: guarded("type"),
+    key: guarded("key"),
+    waitFor,
+    waitForNode,
+  };
+  return {
+    proxy,
+    revoke: () => {
+      revoked = true;
+    },
+  };
+}
+
 // First line is the error message; a few stack frames follow for context.
 function formatError(error) {
   const lines = [error && error.message ? error.message : String(error)];
@@ -197,7 +258,6 @@ async function main() {
 
     const testFn = mod.default;
     const displayName = mod.name ?? file;
-    const testTimeout = mod.timeout ?? args.timeout;
 
     if (typeof testFn !== "function") {
       const e = new Error(`"${file}" has no default export function`);
@@ -206,19 +266,45 @@ async function main() {
       continue;
     }
 
+    // Per-test timeout override. Absent (undefined/null) falls back to --timeout, preserving the
+    // original `mod.timeout ?? args.timeout`; but an explicit override must clear the same
+    // "positive number of ms" bar the CLI enforces on --timeout. Without this, `export const
+    // timeout = 0` slips through `??` (0 isn't nullish) and races the test against a 0ms deadline,
+    // reporting a bogus "timed out after 0ms" instead of flagging the bad export.
+    let testTimeout;
+    if (mod.timeout == null) {
+      testTimeout = args.timeout;
+    } else if (Number.isFinite(mod.timeout) && mod.timeout > 0) {
+      testTimeout = mod.timeout;
+    } else {
+      const e = new Error(
+        `invalid export const timeout: ${String(mod.timeout)} — must be a positive number of ms`
+      );
+      results.push({ ok: false });
+      reportResult(args.tap, i + 1, displayName, false, 0, e);
+      continue;
+    }
+
     const testArtifactsDir = path.join(artifactsRoot, testBasename);
     fs.mkdirSync(testArtifactsDir, { recursive: true });
     const log = makeLog(displayName, args.tap);
+    // Wrap the shared client so this test's async work can be cut off the instant it settles —
+    // otherwise a timed-out test keeps polling and firing UI events into the next test's run.
+    const { proxy: td, revoke } = revocableClient(d, displayName);
     const start = Date.now();
     try {
       await withTimeout(
-        testFn({ d, expect, artifacts: testArtifactsDir, log }),
+        testFn({ d: td, expect, artifacts: testArtifactsDir, log }),
         testTimeout,
         displayName
       );
+      revoke();
       results.push({ ok: true });
       reportResult(args.tap, i + 1, displayName, true, Date.now() - start);
     } catch (e) {
+      // Revoke first so a timed-out test's still-running polls/ops die now, not during the next
+      // test. Failure capture below deliberately uses the RAW client, which stays live.
+      revoke();
       const ms = Date.now() - start;
       await captureFailureArtifacts(d, testArtifactsDir);
       results.push({ ok: false });
