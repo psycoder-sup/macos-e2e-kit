@@ -1,0 +1,8 @@
+{
+  "name": "macos-e2e-kit",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
+}
