@@ -75,6 +75,17 @@ own `e2e.sock` (`swift/Sources/E2EBridgeCore/E2ESocketPath.swift`). A plain run 
 `E2E_INSTANCE` unset uses the bare bundle id — this is also how your harness's `launch_app()`
 should invoke the app (see §6).
 
+**Display name.** Isolation keeps instances apart on disk; the *display name* keeps them apart on
+screen. `harness-lib.sh` derives a `label` (the current git branch by default, override with
+`E2E_LABEL`) and exports it. A bundleless GUI app has no CFBundleName, so its Dock tile and menu-bar
+name come from the process name — identical for every instance. The `labeled_launcher` helper works
+around that: it launches the binary through a per-label symlink whose basename is `<AppName>
+(<label>)`, so the process name — and thus the Dock/menu name — is unique per instance. The window
+title is set in-app from `E2E_LABEL` directly. `label` is purely cosmetic and independent of
+`E2E_INSTANCE`: branch names carry slashes (flattened to `-` for the Dock/menu filename; the window
+title keeps the literal branch) and can collide across same-branch worktrees, which is fine for a
+name but would break socket identity — so the two never share a variable.
+
 ## 3. Register app-specific side-channel ops
 
 Beyond the generic `debug.*` surface, your tests will often need app state that isn't visible in
@@ -213,7 +224,7 @@ into your repo as `harness.sh` and fill in the marked sections:
 
 ```
 harness.sh up [--force]   # idempotent build+launch; last stdout line is machine-parseable:
-                           #   READY inst=<inst> SOCK=<absolute socket path>
+                           #   READY inst=<inst> label=<label> SOCK=<absolute socket path>
 harness.sh down           # tear down ONLY this instance (PID-scoped — never a peer's app)
 harness.sh status          # exit 0 if healthy, non-zero otherwise
 ```
@@ -224,11 +235,12 @@ Functions you must (or may) fill in, top to bottom in the template:
 |---|---|---|
 | `build_app` | yes | build your app for E2E testing; non-zero exit fails `up` |
 | `backend_up` / `backend_down` | no (no-op default) | start/stop any dependent services (DB, mock server) |
-| `launch_app` | yes | launch the built binary — **must** `export E2E_INSTANCE="$inst"` before launching (so `E2ESocketPath.default()` derives the matching suffixed socket) and record the PID to `"$state/app.pid"` |
+| `launch_app` | yes | launch the built binary — **must** `export E2E_INSTANCE="$inst"` before launching (so `E2ESocketPath.default()` derives the matching suffixed socket) and record the PID to `"$state/app.pid"`; for a bundleless GUI app, wrap the binary in `labeled_launcher` so the Dock/menu name is per-instance |
 | `app_ready_extra` | no (no-op default) | extra readiness checks beyond `debug.ping` answering |
 
 The template already computes the per-checkout instance token (`inst`, from a hash of the repo's
-`git rev-parse --show-toplevel`, overridable via `E2E_INSTANCE`), the matching socket path
+`git rev-parse --show-toplevel`, overridable via `E2E_INSTANCE`), the display `label` (git branch by
+default, overridable via `E2E_LABEL`) plus its `labeled_launcher` helper, the matching socket path
 (`~/Library/Application Support/<BUNDLE_ID>.<inst>/e2e.sock` — must match your app's
 `E2ESocketPath` derivation), the 104-byte `sun_path` guard, and a `drive()` helper that shells out
 to `node "$KIT_ROOT/node/drive.mjs"` against that socket. Point `KIT_ROOT` at the kit root —

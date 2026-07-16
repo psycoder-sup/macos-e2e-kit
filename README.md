@@ -38,7 +38,7 @@ fill in (build/launch functions only — the up/down/status contract is already 
 **3. Run E2E tests**
 
 ```
-ready="$(./harness.sh up)"           # last line: "READY inst=... SOCK=<path>"
+ready="$(./harness.sh up)"           # last line: "READY inst=... label=... SOCK=<path>"
 export SOCK="${ready##*SOCK=}"
 node "${CLAUDE_PLUGIN_ROOT}/node/runner.mjs" --dir tests/e2e
 ./harness.sh down
@@ -70,7 +70,7 @@ with no host app of your own required:
 
 ```bash
 cd examples/DemoApp
-ready="$(./harness.sh up)"                        # builds + launches, last line: "READY inst=... SOCK=..."
+ready="$(./harness.sh up)"                        # builds + launches, last line: "READY inst=... label=... SOCK=..."
 export SOCK="${ready##*SOCK=}"                    # runner.mjs/drive.mjs read the socket from SOCK/E2E_SOCK
 node ../../node/runner.mjs --dir tests/e2e        # runs add-item.e2e.mjs and keyboard.e2e.mjs
 ./harness.sh down                                 # tears down this instance only

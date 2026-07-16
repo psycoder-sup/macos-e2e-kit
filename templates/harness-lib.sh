@@ -39,6 +39,16 @@ repo_root="$(git -C "$here" rev-parse --show-toplevel 2>/dev/null)"
 id_source="${repo_root:-$here}"   # falls back to this dir's path when not in a git repo
 inst="${E2E_INSTANCE:-$(printf %s "$id_source" | shasum | cut -c1-6)}"
 
+# ── display label: human-readable name the app surfaces in its window title / Dock / menu bar ──
+# Separate concern from `inst`: `inst` is the socket/state identity (must stay path-unique and
+# AF_UNIX-safe); `label` only names what you see, so parallel branch checkouts are distinguishable.
+# Defaults to the current git branch; override with E2E_LABEL; falls back to `inst` outside a repo.
+branch="$(git -C "$here" symbolic-ref --quiet --short HEAD 2>/dev/null)"
+# Outer `-` (not `:-`): E2E_LABEL unset → branch (or `inst` outside a repo); E2E_LABEL="" set empty
+# → empty label, an explicit opt-out to the plain, unlabeled app name. Inner `:-`: empty branch → inst.
+label="${E2E_LABEL-${branch:-$inst}}"
+export E2E_LABEL="$label"   # exported so launch_app's backgrounded child inherits it for its title
+
 # ── state dir: pid/log/env files for THIS instance only ──────────────────────────
 state="${TMPDIR:-/tmp}/e2e-${APP_NAME}/${inst}"; mkdir -p "$state"
 
@@ -57,6 +67,20 @@ if [ "${#sock}" -ge 104 ]; then
   echo "  shorten E2E_INSTANCE (currently '$inst') or BUNDLE_ID and retry." >&2
   exit 1
 fi
+
+# ── labeled launcher: give each instance a distinct Dock tile + menu-bar app name ─────
+# A bundleless GUI app takes its Dock/menu name from the process name (argv[0] basename), so every
+# instance launched from the same binary looks identical. Echo a per-label symlink to <binary> whose
+# basename encodes the label — launch THAT and the process reads "<AppName> (<label>)" everywhere.
+# Slashes/spaces in the label are flattened so it is a valid filename (the window title, set in-app
+# from E2E_LABEL, keeps the literal label). An empty label echoes <binary> unchanged (no symlink).
+labeled_launcher() {
+  local bin="$1" safe
+  [ -z "$label" ] && { printf %s "$bin"; return; }
+  safe="$(printf %s "$label" | tr '/ ' '--')"
+  local link="$state/$(basename "$bin") ($safe)"
+  ln -sf "$bin" "$link" && printf %s "$link"
+}
 
 # ── drive helper: always talks to THIS instance's socket ─────────────────────────
 drive() {
@@ -88,7 +112,7 @@ already_up() {
 
 # The one machine-parseable line every successful `up` must end with.
 print_ready() {
-  echo "READY inst=$inst SOCK=$sock"
+  echo "READY inst=$inst label=$label SOCK=$sock"
 }
 
 up() {

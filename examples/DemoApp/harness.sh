@@ -31,9 +31,12 @@ build_app() {
 }
 
 # Launch the built executable with E2E_INSTANCE exported so the app's E2ESocketPath derives the same
-# suffixed socket dir this harness computed. Background it and record the PID for PID-scoped teardown.
+# suffixed socket dir this harness computed. labeled_launcher wraps the binary in a per-label symlink
+# so the Dock tile + menu-bar name read "DemoApp (<label>)" instead of a bare "DemoApp" for every
+# instance. Background it and record the PID for PID-scoped teardown.
 launch_app() {
-  E2E_INSTANCE="$inst" nohup "$here/.build/debug/DemoApp" >"$state/app.log" 2>&1 &
+  local bin; bin="$(labeled_launcher "$here/.build/debug/DemoApp")"
+  E2E_INSTANCE="$inst" nohup "$bin" >"$state/app.log" 2>&1 &
   echo $! >"$state/app.pid"
   disown 2>/dev/null || true
 }
