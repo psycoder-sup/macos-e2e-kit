@@ -12,6 +12,10 @@
 # `inst`, so two checkouts can run `up` at the same time without colliding — each gets
 # its own state dir, socket, and app process. Override the token with E2E_INSTANCE=name.
 # Teardown only ever touches PIDs this instance itself recorded — never a peer's app.
+#
+# Display name: separately, `label` (git branch by default, override with E2E_LABEL) names what you
+# SEE — the app's window title, Dock tile, and menu-bar name — so parallel instances are told apart
+# at a glance. It is independent of E2E_INSTANCE (which governs socket identity, not the visible name).
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -92,8 +96,12 @@ backend_down() {
 #      derives the same suffixed socket dir this harness computed above.
 #   2. background the process and write its PID to "$state/app.pid" (used by
 #      already_up/down/status to check liveness and to kill only this instance).
+# SHOULD (bundleless GUI apps): launch via labeled_launcher so the Dock tile + menu-bar name read
+#   "<AppName> (<label>)" per instance instead of a bare, identical "<AppName>". Drop it for a .app
+#   bundle (set a per-instance CFBundleName instead) or a headless binary with no visible name.
 # Example:
-#   E2E_INSTANCE="$inst" nohup "$here/.build/debug/MyApp" >"$state/app.log" 2>&1 &
+#   bin="$(labeled_launcher "$here/.build/debug/MyApp")"
+#   E2E_INSTANCE="$inst" nohup "$bin" >"$state/app.log" 2>&1 &
 #   echo $! >"$state/app.pid"; disown 2>/dev/null || true
 launch_app() {
   echo "  ✗ launch_app() is not implemented — edit this file (see comment above)" >&2

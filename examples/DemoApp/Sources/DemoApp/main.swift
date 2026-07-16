@@ -27,7 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "DemoApp"
+        // Fold the harness-supplied instance label into the title so parallel debug instances are
+        // distinguishable at a glance. E2E_LABEL (branch by default) is what harness.sh exports; fall
+        // back to E2E_INSTANCE, then to the bare name for a plain (non-E2E) run.
+        let env = ProcessInfo.processInfo.environment
+        let label = env["E2E_LABEL"] ?? env["E2E_INSTANCE"] ?? ""
+        window.title = label.isEmpty ? "DemoApp" : "DemoApp (\(label))"
         window.contentView = NSHostingView(rootView: ContentView(model: model))
         window.center()
         window.makeKeyAndOrderFront(nil)
