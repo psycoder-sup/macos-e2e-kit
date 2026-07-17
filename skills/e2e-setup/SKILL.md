@@ -47,6 +47,14 @@ and use that same id as `BUNDLE_ID` in the harness (step 3). See
 bridge from `applicationDidFinishLaunching` (not before `app.run()`), which is what makes the
 accessibility tree populated by the time a client connects.
 
+**Focus:** never `NSApp.activate`/`makeKeyAndOrderFront` unconditionally at launch — gate on
+`BackgroundDrivenMode.isRequested` (DemoApp's `main.swift` is the reference) so harness-driven runs
+stay backgrounded and don't steal the user's focus. SwiftUI-lifecycle apps MUST add
+`BackgroundDrivenMode.applyIfRequested()` in `App.init()` (gated `#if DEBUG && canImport(E2EBridgeAX)`)
+— SwiftUI activates the app during scene bring-up, so wiring it anywhere later (e.g.
+`applicationDidFinishLaunching`) is too late. AppKit `main` owners call it before `run()`.
+`E2E_FOREGROUND=1` opts out for visual debugging.
+
 Full detail (the `fallback` escape hatch, debug-gating strategies for stricter hosts, instance
 isolation via `E2E_INSTANCE`): `${CLAUDE_PLUGIN_ROOT}/docs/integration.md` §§1-4.
 

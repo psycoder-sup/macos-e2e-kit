@@ -13,7 +13,8 @@ private let demoBundleID = "dev.macos-e2e-kit.demo"
 ///
 /// Bringing the window up (and starting the bridge) from `applicationDidFinishLaunching` — rather
 /// than before `app.run()` — is what makes the accessibility tree populate for a bare executable:
-/// the process must be a fully-initialized `.regular` GUI app before its own AX tree is queryable.
+/// the process must be a fully-initialized, non-`.prohibited` GUI app before its own AX tree is
+/// queryable (`.accessory` works — self-process AX doesn't depend on Dock presence or frontmost state).
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = ItemsModel()
@@ -35,10 +36,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = label.isEmpty ? "DemoApp" : "DemoApp (\(label))"
         window.contentView = NSHostingView(rootView: ContentView(model: model))
         window.center()
-        window.makeKeyAndOrderFront(nil)
+        if BackgroundDrivenMode.isRequested {
+            // Order the window in without key status or app activation — `isVisible == true` is what
+            // WindowCapture/AXTreeCapture need; the user's focus stays wherever it was.
+            window.orderFront(nil)
+        } else {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
         self.window = window
-
-        NSApp.activate(ignoringOtherApps: true)
 
         // Start the bridge now that the window exists, so a connecting client sees a populated AX
         // tree. The socket opens only on start(), and PeerVerifier gates every connection.
@@ -58,9 +64,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 let app = NSApplication.shared
-// .regular makes this bare executable a real, focusable GUI app (dock, menu bar, visible window) —
-// required for its window to appear in the accessibility tree.
-app.setActivationPolicy(.regular)
+// A non-.prohibited policy makes this bare executable a real GUI app whose window appears in the
+// accessibility tree. Harness-driven runs use .accessory (no Dock icon, never steals the user's
+// focus — see BackgroundDrivenMode); a plain manual run keeps .regular (dock, menu bar, focusable).
+app.setActivationPolicy(BackgroundDrivenMode.isRequested ? .accessory : .regular)
 let delegate = AppDelegate()
 app.delegate = delegate
 app.run()

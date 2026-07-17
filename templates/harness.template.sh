@@ -99,6 +99,9 @@ backend_down() {
 # SHOULD (bundleless GUI apps): launch via labeled_launcher so the Dock tile + menu-bar name read
 #   "<AppName> (<label>)" per instance instead of a bare, identical "<AppName>". Drop it for a .app
 #   bundle (set a per-instance CFBundleName instead) or a headless binary with no visible name.
+# NOTE: with E2E_INSTANCE exported, the app launches background-driven (the bridge switches it to
+#   the .accessory activation policy — no Dock icon, no focus stolen from the user). Export
+#   E2E_FOREGROUND=1 here to opt out and watch the app being driven in the foreground.
 # Example:
 #   bin="$(labeled_launcher "$here/.build/debug/MyApp")"
 #   E2E_INSTANCE="$inst" nohup "$bin" >"$state/app.log" 2>&1 &

@@ -67,7 +67,12 @@ enum AXTreeCapture {
         if let sizeRef = AXElement.copyRaw(element, kAXSizeAttribute), CFGetTypeID(sizeRef) == AXValueGetTypeID() {
             AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
         }
-        return AXFrame(x: Double(origin.x), y: Double(origin.y),
-                       width: Double(size.width), height: Double(size.height))
+        // SwiftUI elements can report non-finite axes (e.g. an un-laid-out view or a
+        // `.frame(maxWidth: .infinity)` surfaced literally). A default JSONEncoder rejects
+        // non-finite Doubles ("data couldn't be written… correct format"), which would fail
+        // the whole `tree` op — clamp to 0 so capture stays serializable.
+        func finite(_ v: CGFloat) -> Double { let d = Double(v); return d.isFinite ? d : 0 }
+        return AXFrame(x: finite(origin.x), y: finite(origin.y),
+                       width: finite(size.width), height: finite(size.height))
     }
 }

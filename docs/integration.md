@@ -40,6 +40,15 @@ try? e2e.start()
 #endif
 ```
 
+Under a harness launch (`E2E_INSTANCE` exported) the app also runs background-driven: the
+`.accessory` activation policy — no Dock icon, no activation at launch, and driving it never steals
+the user's focus (see `BackgroundDrivenMode`). Windows still render, so screenshots and the AX tree
+are unaffected. Call `BackgroundDrivenMode.applyIfRequested()` as early as possible: SwiftUI-lifecycle
+apps MUST call it from `App.init()` (SwiftUI activates the app during scene bring-up, so
+`applicationDidFinishLaunching` is too late); AppKit `main` owners call it before `run()`.
+`AppKitDebugBridge.init` applies it too as a best-effort backstop. Set `E2E_FOREGROUND=1` to opt out
+and watch the app in the foreground.
+
 `E2EBridgeServer`'s real initializer (`swift/Sources/E2EBridgeCore/E2EBridgeServer.swift`):
 
 ```swift
@@ -272,9 +281,10 @@ entry documents.
 ## 7. Troubleshooting
 
 - **Empty accessibility tree (`debug.ui_tree` returns `{ windows: [] }`).** The app has no visible
-  window yet, or is not the active/frontmost app. `uiTree()` only walks *visible* windows — if
-  you're driving the app right after launch, poll (the harness's `wait_for_ping` already does this
-  for liveness; add your own short retry around `tree` if a window takes longer to appear than the
+  window yet. `uiTree()` only walks *visible* (ordered-in) windows — activation/frontmost status is
+  irrelevant (under a harness the app runs `.accessory` and backgrounded by design). If you're
+  driving the app right after launch, poll (the harness's `wait_for_ping` already does this for
+  liveness; add your own short retry around `tree` if a window takes longer to appear than the
   process itself does).
 - **Socket connect refused / connection immediately closes with no response.** Two likely causes:
   (1) the debug-gated `start()` never ran — check you're running a `#if DEBUG` build (or your

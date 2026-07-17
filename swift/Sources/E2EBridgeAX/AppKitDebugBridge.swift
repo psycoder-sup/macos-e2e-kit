@@ -7,7 +7,11 @@ import E2EBridgeCore
 /// bridge (see docs/integration.md).
 @MainActor
 public final class AppKitDebugBridge: DebugBridge {
-    public init() {}
+    /// Constructing the bridge is the one thing every onboarded app does at launch, so it doubles as
+    /// the hook that keeps a harness-driven run from stealing the user's focus.
+    public init() {
+        BackgroundDrivenMode.applyIfRequested()
+    }
 
     public func screenshot() -> [ScreenshotShot] {
         WindowCapture.captureVisibleWindows()

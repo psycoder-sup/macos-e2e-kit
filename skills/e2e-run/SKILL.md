@@ -62,6 +62,9 @@ d(){ SOCK="<sock from READY>" node ${CLAUDE_PLUGIN_ROOT}/node/drive.mjs "$@"; } 
   <name> [mods]` (e.g. `d key return command`, `d key escape`, `d key tab`; mods comma-separated) ·
   `d setval <id> <val>` (raw AX value — observe-only) · `d call <op> [json]` (any registered side-channel
   op — read app state to cross-check a UI change).
+- Driving never steals the user's focus: the app runs backgrounded (`.accessory`, no Dock icon) and
+  key events are delivered window-direct. Launch with `E2E_FOREGROUND=1` only when the user asks to
+  watch the run visually.
 
 Worked flow (against `examples/DemoApp` — ops `demo.input`/`demo.add`, side-channel `demo.state`):
 

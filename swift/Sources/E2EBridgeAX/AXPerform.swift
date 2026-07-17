@@ -120,8 +120,8 @@ enum AXPerform {
     // MARK: - Key input injection (typing · key combos)
 
     /// Types text into the focused (or `identifier`-specified) element as real key events. Unlike setting the
-    /// AX value (`setValue`), this flows NSEvents through the app's event path (`NSApp.sendEvent`) to drive
-    /// text insertion (insertText), so SwiftUI bindings update too.
+    /// AX value (`setValue`), this flows NSEvents through the target window's event path
+    /// (`NSWindow.sendEvent`) to drive text insertion (insertText), so SwiftUI bindings update too.
     @MainActor
     static func type(identifier: String?, text: String) throws -> AXActionResult {
         let window = try keyWindow()
@@ -146,7 +146,7 @@ enum AXPerform {
     /// Sends a named key (+ modifiers) to the key window (e.g. return+command to submit, escape to dismiss,
     /// tab to move focus). Modifier combos (e.g. ⌘↵) are tried first as a key equivalent — SwiftUI's
     /// `.keyboardShortcut` is handled by the responder chain's `performKeyEquivalent`, and a synthesized
-    /// event alone via `NSApp.sendEvent` won't fire it. If the key equivalent doesn't handle it (or there are
+    /// event alone via `sendEvent` won't fire it. If the key equivalent doesn't handle it (or there are
     /// no modifiers), falls back to a plain key event (first responder's onSubmit/insertText).
     @MainActor
     static func key(name: String, modifiers: [String]) throws -> AXActionResult {
@@ -169,22 +169,23 @@ enum AXPerform {
         return AXActionResult(identifier: combo, role: "AXKey", label: combo, value: handled ? "keyEquivalent" : "keyEvent")
     }
 
-    /// The window to receive key events — if none, activates the app to make the main/target window key
-    /// (covers a backgrounded app).
+    /// The window to receive key events. Never activates the app or reorders windows — a driven app must
+    /// not steal the user's focus (see BackgroundDrivenMode). `makeKey()` grants app-local key status,
+    /// which is all the responder chain needs to accept synthesized events while the app stays backgrounded.
     @MainActor
     private static func keyWindow() throws -> NSWindow {
-        if NSApp.keyWindow == nil { NSApp.activate(ignoringOtherApps: true) }
         let window = NSApp.keyWindow ?? NSApp.mainWindow ?? WindowCapture.targetWindows().first
         guard let window else {
             throw DebugBridgeError.performFailed("No window found to send key events to (no window).")
         }
-        if !window.isKeyWindow { window.makeKeyAndOrderFront(nil) }
+        if !window.isKeyWindow { window.makeKey() }
         return window
     }
 
-    /// Sends a keyDown+keyUp NSEvent pair through the app's event path (`NSApp.sendEvent`) — handles both
-    /// key equivalents (⌘↵) and text input (insertText) like real input (a synthesized event still rides the
-    /// responder chain).
+    /// Sends a keyDown+keyUp NSEvent pair through the target window's event path (`NSWindow.sendEvent`) —
+    /// handles both key equivalents (⌘↵) and text input (insertText) like real input (a synthesized event
+    /// still rides the responder chain). Window-direct on purpose: `NSApp.sendEvent` routes key events via
+    /// the app-level key window, which only exists reliably when the app is active.
     @MainActor
     private static func send(characters: String, ignoring: String, keyCode: UInt16,
                              flags: NSEvent.ModifierFlags, to window: NSWindow) {
@@ -196,7 +197,7 @@ enum AXPerform {
                 characters: characters, charactersIgnoringModifiers: ignoring,
                 isARepeat: false, keyCode: keyCode
             ) {
-                NSApp.sendEvent(event)
+                window.sendEvent(event)
             }
         }
     }
