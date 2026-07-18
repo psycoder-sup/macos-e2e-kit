@@ -1,6 +1,6 @@
 {
   "name": "macos-e2e-kit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Agent-driven E2E testing for any macOS app: an embeddable debug IPC bridge for self-inspection, a zero-dependency Node driver/runner, and skills to onboard your app and run tests.",
   "author": {
     "name": "SangUk Park"

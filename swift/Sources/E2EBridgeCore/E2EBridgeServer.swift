@@ -3,7 +3,7 @@ import Foundation
 /// The package version reported by `debug.ping`.
 /// Bump together with `.claude-plugin/plugin.json` "version" on every release.
 public enum E2EBridgeVersion {
-    public static let current = "0.2.0"
+    public static let current = "0.3.0"
 }
 
 /// The facade a host wires up to expose an E2E bridge over a Unix domain socket.
