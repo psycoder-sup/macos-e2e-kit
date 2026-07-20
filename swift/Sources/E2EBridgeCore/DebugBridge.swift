@@ -43,6 +43,17 @@ public protocol DebugBridge {
     /// escape to dismiss, tab to move focus. The "input" phase of the observe→input loop; it fires
     /// key equivalents and onSubmit just as a person pressing the key would.
     func key(name: String, modifiers: [String]) async throws -> AXActionResult
+
+    /// Brings the app to the foreground: reverses background-driven mode (`.accessory` back to
+    /// `.regular`) when active, then activates the app and surfaces a window. In-process
+    /// self-activation — needs no TCC permission.
+    func activate()
+}
+
+extension DebugBridge {
+    /// Default no-op so pre-existing custom conformers keep compiling — `debug.activate` then
+    /// answers ok without doing anything; implement `activate()` to support foregrounding.
+    public func activate() {}
 }
 
 /// One captured window — base64 image + logical size (pt) and window title. The bridge serializes

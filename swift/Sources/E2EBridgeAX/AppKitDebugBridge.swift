@@ -36,4 +36,11 @@ public final class AppKitDebugBridge: DebugBridge {
     public func key(name: String, modifiers: [String]) async throws -> AXActionResult {
         try AXPerform.key(name: name, modifiers: modifiers)
     }
+
+    public func activate() {
+        BackgroundDrivenMode.foreground()
+        for window in NSApp.windows where window.isMiniaturized { window.deminiaturize(nil) }
+        (NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first { $0.isVisible })?
+            .makeKeyAndOrderFront(nil)
+    }
 }

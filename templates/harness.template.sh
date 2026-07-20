@@ -3,10 +3,13 @@
 # marked sections. Drives the app over its debug.* IPC socket via the kit's
 # node/drive.mjs (see docs/protocol.md for the wire protocol).
 #
-#   harness.sh up [--force]   # idempotent build+launch; last stdout line is
-#                              #   "READY inst=<inst> SOCK=<absolute socket path>"
+#   harness.sh up [--force] [--open]
+#                             # idempotent build+launch; last stdout line is
+#                             #   "READY inst=<inst> SOCK=<absolute socket path>"
+#                             # --open (or E2E_FOREGROUND=1) brings the app — running or freshly
+#                             # launched — to the foreground (reverses background-driven mode)
 #   harness.sh down           # tear down ONLY this instance (PID-scoped, no broad pkill)
-#   harness.sh status         # exit 0 if healthy, non-zero otherwise
+#   harness.sh status         # exit 0 if healthy, non-zero otherwise; shows the built binary path
 #
 # Multi-session: every git worktree (or plain checkout) gets its own instance token
 # `inst`, so two checkouts can run `up` at the same time without colliding — each gets
@@ -101,7 +104,8 @@ backend_down() {
 #   bundle (set a per-instance CFBundleName instead) or a headless binary with no visible name.
 # NOTE: with E2E_INSTANCE exported, the app launches background-driven (the bridge switches it to
 #   the .accessory activation policy — no Dock icon, no focus stolen from the user). Export
-#   E2E_FOREGROUND=1 here to opt out and watch the app being driven in the foreground.
+#   E2E_FOREGROUND=1 here to opt out and watch the app being driven in the foreground — or run
+#   `harness.sh up --open` to foreground an instance on demand (works either way, via debug.activate).
 # Example:
 #   bin="$(labeled_launcher "$here/.build/debug/MyApp")"
 #   E2E_INSTANCE="$inst" nohup "$bin" >"$state/app.log" 2>&1 &

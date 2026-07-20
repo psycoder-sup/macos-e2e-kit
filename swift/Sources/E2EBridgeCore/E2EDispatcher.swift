@@ -91,6 +91,9 @@ public final class E2EDispatcher {
             case "debug.key":
                 let args = try decodeArgs(KeyArgs.self, request)
                 return try encode(try await driver.key(name: args.key, modifiers: args.modifiers ?? []))
+            case "debug.activate":
+                driver.activate()
+                return .success(.object(["ok": .bool(true)]))
             default:
                 return .failure(code: "unknown_op", message: "Unknown debug op: \(request.op)")
             }

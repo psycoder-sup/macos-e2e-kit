@@ -2,10 +2,13 @@
 # E2E harness for examples/DemoApp — the kit's self-verification target.
 #
 # Implements the harness.template.sh contract with no backend (pure-client app):
-#   harness.sh up [--force]   # idempotent build+launch; last stdout line is
-#                              #   "READY inst=<inst> SOCK=<absolute socket path>"
+#   harness.sh up [--force] [--open]
+#                             # idempotent build+launch; last stdout line is
+#                             #   "READY inst=<inst> SOCK=<absolute socket path>"
+#                             # --open (or E2E_FOREGROUND=1) brings the app — running or freshly
+#                             # launched — to the foreground (reverses background-driven mode)
 #   harness.sh down           # tear down ONLY this instance (PID-scoped, no broad pkill)
-#   harness.sh status         # exit 0 if healthy, non-zero otherwise
+#   harness.sh status         # exit 0 if healthy, non-zero otherwise; shows the built binary path
 #
 # Multi-session: each checkout gets its own instance token `inst`, so parallel `up`s don't collide.
 # Override the token with E2E_INSTANCE=name. Teardown only ever touches this instance's recorded PID.
