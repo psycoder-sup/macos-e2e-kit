@@ -64,7 +64,8 @@ d(){ SOCK="<sock from READY>" node ${CLAUDE_PLUGIN_ROOT}/node/drive.mjs "$@"; } 
   op — read app state to cross-check a UI change).
 - Driving never steals the user's focus: the app runs backgrounded (`.accessory`, no Dock icon) and
   key events are delivered window-direct. Launch with `E2E_FOREGROUND=1` only when the user asks to
-  watch the run visually.
+  watch the run visually — or bring an already-running instance forward on demand with
+  `harness.sh up --open` (or `d activate`).
 
 Worked flow (against `examples/DemoApp` — ops `demo.input`/`demo.add`, side-channel `demo.state`):
 

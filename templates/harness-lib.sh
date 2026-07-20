@@ -76,6 +76,7 @@ fi
 # from E2E_LABEL, keeps the literal label). An empty label echoes <binary> unchanged (no symlink).
 labeled_launcher() {
   local bin="$1" safe
+  printf %s "$bin" >"$state/app.bin"   # real build product path, surfaced by `status` as binary:
   [ -z "$label" ] && { printf %s "$bin"; return; }
   safe="$(printf %s "$label" | tr '/ ' '--')"
   local link="$state/$(basename "$bin") ($safe)"
@@ -115,10 +116,36 @@ print_ready() {
   echo "READY inst=$inst label=$label SOCK=$sock"
 }
 
+# Bring THIS instance's app to the foreground via debug.activate — reverses background-driven
+# .accessory mode and activates, whether the app was just launched or already up, with or without
+# E2E_FOREGROUND=1. Never fails `up`: a refused activation only warns.
+open_app() {
+  if drive activate >/dev/null 2>&1; then
+    echo "  ✓ app brought to foreground"
+  else
+    echo "  ⚠ could not bring app to foreground (debug.activate failed)" >&2
+  fi
+}
+
 up() {
-  if [ "${1:-}" != "--force" ] && already_up; then
+  local force="" open=""
+  # E2E_FOREGROUND=1 already makes a fresh launch run foregrounded; treating it as --open too
+  # extends that promise to the already-up path (and to apps that only self-activate at launch).
+  [ "${E2E_FOREGROUND:-}" = "1" ] && open=1
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --force) force=1 ;;
+      --open) open=1 ;;
+      "") ;;
+      *) echo "usage: harness.sh up [--force] [--open]" >&2; exit 1 ;;
+    esac
+  done
+
+  if [ -z "$force" ] && already_up; then
     echo "✓ already up [inst=$inst] — app alive + debug.ping ok, skipping rebuild."
     echo "  (run 'harness.sh up --force' to rebuild, or 'harness.sh down' first)"
+    [ -n "$open" ] && open_app
     print_ready
     return 0
   fi
@@ -144,6 +171,7 @@ up() {
   app_ready_extra || { echo "  ✗ app_ready_extra failed"; exit 1; }
   echo "  ✓ ready"
 
+  [ -n "$open" ] && open_app
   print_ready
 }
 
@@ -159,7 +187,7 @@ down() {
 }
 
 status() {
-  local apid ok=0
+  local apid ok=0 bin=""
   apid="$([ -f "$state/app.pid" ] && cat "$state/app.pid" 2>/dev/null)"
   echo "inst:   $inst   (state $state)"
   echo "sock:   $sock"
@@ -168,6 +196,14 @@ status() {
   else
     echo "app:    stopped"; ok=1
   fi
+  # Built-app location: labeled_launcher records the real build product in app.bin; fall back to
+  # the running process's command path (a launch_app that skipped labeled_launcher). Informational
+  # only — never affects the exit code.
+  [ -f "$state/app.bin" ] && bin="$(cat "$state/app.bin" 2>/dev/null)"
+  if [ -z "$bin" ] && [ -n "$apid" ] && kill -0 "$apid" 2>/dev/null; then
+    bin="$(ps -p "$apid" -o comm= 2>/dev/null)"
+  fi
+  echo "binary: ${bin:-unknown (nothing recorded — launch_app skipped labeled_launcher)}"
   if drive ping >/dev/null 2>&1; then
     echo "ping:   ok"
   else
@@ -181,9 +217,9 @@ status() {
 # all FILL-IN functions have been (re)defined.
 harness_main() {
   case "${1:-}" in
-    up) up "${2:-}" ;;
+    up) up "${@:2}" ;;
     down) down ;;
     status) status ;;
-    *) echo "usage: harness.sh {up [--force]|down|status}" >&2; exit 1 ;;
+    *) echo "usage: harness.sh {up [--force] [--open]|down|status}" >&2; exit 1 ;;
   esac
 }

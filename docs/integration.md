@@ -47,7 +47,8 @@ are unaffected. Call `BackgroundDrivenMode.applyIfRequested()` as early as possi
 apps MUST call it from `App.init()` (SwiftUI activates the app during scene bring-up, so
 `applicationDidFinishLaunching` is too late); AppKit `main` owners call it before `run()`.
 `AppKitDebugBridge.init` applies it too as a best-effort backstop. Set `E2E_FOREGROUND=1` to opt out
-and watch the app in the foreground.
+and watch the app in the foreground — or foreground an instance on demand with `harness.sh up --open`
+(the `debug.activate` op), which works whether or not the app was launched with `E2E_FOREGROUND=1`.
 
 `E2EBridgeServer`'s real initializer (`swift/Sources/E2EBridgeCore/E2EBridgeServer.swift`):
 
@@ -232,10 +233,13 @@ invisible or unaddressable to `debug.ui_tree`/`debug.ui_perform`:
 into your repo as `harness.sh` and fill in the marked sections:
 
 ```
-harness.sh up [--force]   # idempotent build+launch; last stdout line is machine-parseable:
-                           #   READY inst=<inst> label=<label> SOCK=<absolute socket path>
+harness.sh up [--force] [--open]
+                          # idempotent build+launch; last stdout line is machine-parseable:
+                          #   READY inst=<inst> label=<label> SOCK=<absolute socket path>
+                          # --open (or E2E_FOREGROUND=1) brings the app — already-running or freshly
+                          # launched — to the foreground via debug.activate
 harness.sh down           # tear down ONLY this instance (PID-scoped — never a peer's app)
-harness.sh status          # exit 0 if healthy, non-zero otherwise
+harness.sh status         # exit 0 if healthy, non-zero otherwise; shows the built binary path
 ```
 
 Functions you must (or may) fill in, top to bottom in the template:
@@ -267,6 +271,7 @@ node drive.mjs setval <id> <value>       # set AX value directly
 node drive.mjs type <text> [id]          # real key events -> updates SwiftUI bindings
 node drive.mjs key <name> [mods]         # named key + comma-separated modifiers
 node drive.mjs call <op> [argsJSON]      # raw op passthrough (e.g. your registered ops)
+node drive.mjs activate                  # debug.activate — bring the app to the foreground
 ```
 
 It reads the socket path from `SOCK`/`E2E_SOCK` (or an explicit `{ sock }` in code) — exactly the

@@ -13,11 +13,12 @@
 //   node drive.mjs key <name> [mods]         # named key + comma-separated modifiers, e.g. key return command
 //   node drive.mjs call <op> [argsJSON]      # raw op passthrough, e.g. call debug.ping
 //   node drive.mjs ping                      # debug.ping — liveness check
+//   node drive.mjs activate                  # debug.activate — bring the app to the foreground
 import { client, E2EError } from "./lib.mjs";
 
 const USAGE =
-  "usage: drive.mjs tree | shot <prefix> | perform <id> | setval <id> <val> | type <text> [id] | key <name> [mods] | call <op> [json] | ping";
-const COMMANDS = ["tree", "shot", "perform", "setval", "type", "key", "call", "ping"];
+  "usage: drive.mjs tree | shot <prefix> | perform <id> | setval <id> <val> | type <text> [id] | key <name> [mods] | call <op> [json] | ping | activate";
+const COMMANDS = ["tree", "shot", "perform", "setval", "type", "key", "call", "ping", "activate"];
 
 const [cmd, a, b] = process.argv.slice(2);
 
@@ -64,6 +65,10 @@ try {
     }
     case "ping": {
       console.log(JSON.stringify(await d.ping(), null, 2));
+      break;
+    }
+    case "activate": {
+      console.log(JSON.stringify(await d.call("debug.activate", {})));
       break;
     }
   }

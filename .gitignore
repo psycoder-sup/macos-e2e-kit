@@ -3,3 +3,4 @@
 .DS_Store
 .e2e-artifacts/
 node_modules/
+.claude/worktrees/

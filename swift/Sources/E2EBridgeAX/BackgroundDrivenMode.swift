@@ -68,6 +68,19 @@ public enum BackgroundDrivenMode {
         if app.isActive { handBack(); disarm() }
     }
 
+    /// Explicit foreground request (`debug.activate`, i.e. `harness.sh up --open`) — the inverse of
+    /// `applyIfRequested()`. Disarms the launch hand-back first so this activation isn't mistaken
+    /// for launch noise and immediately handed back, restores the `.regular` policy (Dock icon,
+    /// focusable), and activates the app. Idempotent; also safe when background-driven mode was
+    /// never applied (e.g. `E2E_FOREGROUND=1` runs).
+    @MainActor
+    public static func foreground() {
+        disarm()
+        let app = NSApplication.shared
+        if app.activationPolicy() != .regular { app.setActivationPolicy(.regular) }
+        app.activate(ignoringOtherApps: true)
+    }
+
     /// How long after `applyIfRequested()` a self-activation still counts as launch noise.
     private static let launchWindowSeconds: TimeInterval = 5
 
